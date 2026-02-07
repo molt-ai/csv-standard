@@ -109,12 +109,17 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-neutral-800">
-                  <code className="text-xs text-neutral-600">
-                    {typeof window !== 'undefined'
-                      ? `${window.location.origin}/upload/${template.slug}`
-                      : `/upload/${template.slug}`}
-                  </code>
+                <div className="mt-4 pt-3 border-t border-neutral-800 flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={typeof window !== 'undefined' ? `${window.location.origin}/upload/${template.slug}` : ''}
+                    onClick={(e) => {
+                      e.currentTarget.select();
+                      copyLink(template.slug);
+                    }}
+                    className="flex-1 text-xs text-neutral-500 bg-transparent border-none outline-none cursor-pointer select-all"
+                  />
                 </div>
               </div>
             ))}
