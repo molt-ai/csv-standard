@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, ExternalLink, Trash2, Copy, Check } from 'lucide-react';
+import { Plus, ExternalLink, Trash2, Copy, Check, Link2, FileSpreadsheet } from 'lucide-react';
 import { localStore } from '@/lib/supabase';
 import type { Template } from '@/types';
 
@@ -72,10 +72,30 @@ export default function HomePage() {
                       <span>{template.fields.length} fields</span>
                       <span>•</span>
                       <span>{template.fields.filter((f) => f.required).length} required</span>
+                      {template.destination && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1 text-green-500">
+                            <FileSpreadsheet className="w-3 h-3" />
+                            {template.destination.spreadsheetName}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
+                    <Link
+                      href={`/templates/${template.id}/connect`}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded ${
+                        template.destination 
+                          ? 'text-green-400 bg-green-900/30 hover:bg-green-900/50' 
+                          : 'text-neutral-400 bg-neutral-800 hover:text-white'
+                      }`}
+                    >
+                      <Link2 className="w-3.5 h-3.5" />
+                      {template.destination ? 'Connected' : 'Connect'}
+                    </Link>
                     <button
                       onClick={() => copyLink(template.slug)}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-neutral-400 bg-neutral-800 rounded hover:text-white"

@@ -9,6 +9,16 @@ export interface TemplateField {
   description?: string;
 }
 
+export interface SheetConnection {
+  provider: 'google_sheets';
+  accessToken: string;
+  refreshToken: string;
+  spreadsheetId: string;
+  spreadsheetName: string;
+  sheetName: string;
+  connectedAt: string;
+}
+
 export interface Template {
   id: string;
   name: string;
@@ -17,7 +27,8 @@ export interface Template {
   createdAt: string;
   updatedAt: string;
   userId: string;
-  slug: string; // for the shareable URL
+  slug: string;
+  destination?: SheetConnection;
 }
 
 export interface ColumnMapping {

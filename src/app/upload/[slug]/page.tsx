@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Download, AlertCircle, Check, ArrowLeft } from 'lucide-react';
+import { Download, AlertCircle, Check, ArrowLeft, FileSpreadsheet } from 'lucide-react';
 import { FileDropzone } from '@/components/FileDropzone';
 import { ColumnMapper } from '@/components/ColumnMapper';
 import { localStore } from '@/lib/supabase';
@@ -22,6 +22,8 @@ export default function UploadPage() {
   const [mappings, setMappings] = useState<ColumnMapping[]>([]);
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [transformedData, setTransformedData] = useState<Record<string, string>[] | null>(null);
+  const [pushing, setPushing] = useState(false);
+  const [pushed, setPushed] = useState(false);
 
   useEffect(() => {
     const t = localStore.getTemplate(slug) as Template | undefined;
@@ -39,7 +41,38 @@ export default function UploadPage() {
     }
   };
 
-  const handleValidate = () => {
+  const pushToSheets = async (data: Record<string, string>[]) => {
+    if (!template?.destination) return;
+    
+    setPushing(true);
+    try {
+      const headers = template.fields.map(f => f.name);
+      const rows = data.map(row => headers.map(h => row[h] || ''));
+      
+      const res = await fetch('/api/google/append', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessToken: template.destination.accessToken,
+          refreshToken: template.destination.refreshToken,
+          spreadsheetId: template.destination.spreadsheetId,
+          sheetName: template.destination.sheetName,
+          headers,
+          rows,
+        }),
+      });
+      
+      if (res.ok) {
+        setPushed(true);
+      }
+    } catch (error) {
+      console.error('Failed to push to sheets:', error);
+    } finally {
+      setPushing(false);
+    }
+  };
+
+  const handleValidate = async () => {
     if (!parsedData || !template) return;
 
     const validationErrors = validateData(parsedData.data, template.fields, mappings);
@@ -48,6 +81,12 @@ export default function UploadPage() {
     if (validationErrors.length === 0) {
       const transformed = transformData(parsedData.data, template.fields, mappings);
       setTransformedData(transformed);
+      
+      // If connected to Sheets, push automatically
+      if (template.destination) {
+        await pushToSheets(transformed);
+      }
+      
       setStep('complete');
     } else {
       setStep('validate');
@@ -190,15 +229,35 @@ export default function UploadPage() {
               <Check className="w-6 h-6 text-green-400" />
             </div>
             <p className="text-white mb-1">Done</p>
-            <p className="text-sm text-neutral-500 mb-6">{transformedData.length} rows standardized</p>
+            <p className="text-sm text-neutral-500 mb-2">{transformedData.length} rows standardized</p>
             
-            <button
-              onClick={handleDownload}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm text-white bg-neutral-800 rounded-lg hover:bg-neutral-700"
-            >
-              <Download className="w-4 h-4" />
-              Download CSV
-            </button>
+            {template.destination && (
+              <p className="text-sm text-green-400 mb-6 flex items-center justify-center gap-1.5">
+                <FileSpreadsheet className="w-4 h-4" />
+                {pushing ? 'Sending to Google Sheets...' : pushed ? `Added to ${template.destination.spreadsheetName}` : 'Sent to Google Sheets'}
+              </p>
+            )}
+            
+            <div className="flex items-center justify-center gap-3">
+              {template.destination && pushed && (
+                <a
+                  href={`https://docs.google.com/spreadsheets/d/${template.destination.spreadsheetId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm text-white bg-green-800 rounded-lg hover:bg-green-700"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Open Sheet
+                </a>
+              )}
+              <button
+                onClick={handleDownload}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm text-white bg-neutral-800 rounded-lg hover:bg-neutral-700"
+              >
+                <Download className="w-4 h-4" />
+                Download CSV
+              </button>
+            </div>
 
             <div className="mt-6">
               <button onClick={handleReset} className="text-sm text-neutral-500 hover:text-white">
